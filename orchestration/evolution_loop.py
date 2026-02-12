@@ -18,6 +18,8 @@ try:
     from evaluation.backtester import Backtester
     from evaluation.fitness import FitnessCalculator
     from evaluation.metrics import MetricsCollector, StrategyMetrics
+    from storage.strategy_db import StrategyDB
+    from storage.leaderboard import Leaderboard
     from utils.config_loader import GAConfig, load_config
     from utils.logger import get_logger
     logger = get_logger()
@@ -28,6 +30,8 @@ except (ImportError, ModuleNotFoundError):
     from ga_core.population import Population
     from evaluation.fitness import FitnessCalculator
     from evaluation.metrics import MetricsCollector, StrategyMetrics
+    from storage.strategy_db import StrategyDB
+    from storage.leaderboard import Leaderboard
 
 
 class EvolutionLoop:
@@ -88,6 +92,20 @@ class EvolutionLoop:
             weights=self.config.get('fitness_weights')
         )
         self.metrics_collector = MetricsCollector()
+        
+        # Initialize database and leaderboard
+        try:
+            self.db = StrategyDB()
+            self.leaderboard = Leaderboard(self.db)
+            logger.info("Database initialized")
+        except Exception as e:
+            logger.warning(f"Could not initialize database: {e}")
+            self.db = None
+            self.leaderboard = None
+        
+        self.population: Optional[Population] = None
+        self.current_generation = 0
+        self.start_time = None
         
         self.population: Optional[Population] = None
         self.current_generation = 0
@@ -167,6 +185,26 @@ class EvolutionLoop:
             # Update population
             self.population.update_fitness(strategy_id, fitness)
             
+            # Save to database
+            if self.db:
+                # Prepare strategy data for DB
+                strategy_data = {
+                    'name': strategy_id,
+                    'generation': self.current_generation,
+                    'parent1': strategy.get('parent1'),
+                    'parent2': strategy.get('parent2'),
+                    'indicators': strategy.get('indicators', []),
+                    'parameters': strategy.get('parameters', {}),
+                    'code': ''  # Code is saved to files
+                }
+                self.db.save_strategy(strategy_data)
+                self.db.save_result(
+                    strategy_name=strategy_id,
+                    generation=self.current_generation,
+                    fitness=fitness,
+                    metrics=backtest_metrics
+                )
+            
             # Collect metrics
             strategy_metrics = StrategyMetrics.from_backtest_result(
                 strategy_id=strategy_id,
@@ -188,6 +226,19 @@ class EvolutionLoop:
         logger.info(f"  Avg Fitness: {gen_metrics.avg_fitness:.4f}")
         logger.info(f"  Best Profit: {gen_metrics.best_profit:.2f}%")
         logger.info(f"  Diversity: {gen_metrics.diversity_score:.4f}")
+        
+        # Save generation stats to database
+        if self.db:
+            self.db.save_generation(
+                generation=self.current_generation,
+                stats={
+                    'best_fitness': gen_metrics.best_fitness,
+                    'avg_fitness': gen_metrics.avg_fitness,
+                    'best_profit': gen_metrics.best_profit,
+                    'population_size': len(self.population.strategies),
+                    'diversity': gen_metrics.diversity_score
+                }
+            )
     
     def evolve_to_next_generation(self):
         """Evolve the population to the next generation"""

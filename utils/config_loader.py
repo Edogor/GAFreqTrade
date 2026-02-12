@@ -140,7 +140,7 @@ class ConfigLoader:
         """
         path = Path(file_path)
         if not path.is_absolute():
-            path = self.config_dir / path
+            path = self.base_dir / path
             
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {path}")
