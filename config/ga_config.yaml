@@ -1,0 +1,54 @@
+# Genetic Algorithm Configuration
+
+# Population Parameters
+population_size: 100        # Number of strategies per generation
+elite_size: 10             # Number of best strategies to keep unchanged
+generations: 1000          # Maximum number of generations to run
+initial_random: true       # Start with random strategies (vs. loading checkpoint)
+
+# Genetic Operators
+mutation_rate: 0.20        # Probability of mutation per strategy
+mutation_strength: 0.15    # How much to change parameters (±15%)
+crossover_rate: 0.70       # Probability of crossover
+new_random_rate: 0.10      # Rate of introducing completely new random strategies
+
+# Selection Parameters
+selection_method: "tournament"  # Options: "tournament", "roulette", "rank"
+tournament_size: 5         # Number of strategies in tournament selection
+
+# Fitness Function Weights (must sum to ~1.0)
+fitness_weights:
+  profit: 0.30            # Total profit weight
+  sharpe: 0.10            # Sharpe ratio weight
+  drawdown: 0.25          # Max drawdown weight (inverted - lower is better)
+  winrate: 0.15           # Win rate weight
+  stability: 0.20         # Stability score weight
+  trade_penalty: 0.05     # Penalty for too many/few trades
+
+# Strategy Constraints
+min_indicators: 2          # Minimum number of indicators per strategy
+max_indicators: 6          # Maximum number of indicators per strategy
+min_conditions: 1          # Minimum entry/exit conditions
+max_conditions: 4          # Maximum entry/exit conditions
+
+# Performance Settings
+parallel_backtests: 4      # Number of parallel backtest processes (2-4 for Raspberry Pi)
+backtest_timeout: 300      # Timeout in seconds per backtest
+checkpoint_interval: 10    # Save checkpoint every N generations
+
+# Logging
+log_level: "INFO"          # DEBUG, INFO, WARNING, ERROR
+log_to_file: true
+log_file: "logs/evolution.log"
+
+# Advanced Options
+maintain_diversity: true   # Ensure population diversity
+diversity_threshold: 0.7   # Minimum diversity score (0-1)
+early_stopping: false      # Stop if no improvement for N generations
+early_stopping_patience: 50
+
+# Island Model (optional - for future use)
+use_islands: false
+num_islands: 3
+migration_interval: 20
+migration_size: 3
