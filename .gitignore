@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Checkpoints
+checkpoints/
+*.checkpoint
+
+# Generated Strategies (keep structure, ignore content)
+strategies/generated/*
+!strategies/generated/.gitkeep
+strategies/hall_of_fame/*
+!strategies/hall_of_fame/.gitkeep
+
+# Backtest Results
+freqtrade/user_data/backtest_results/*
+!freqtrade/user_data/backtest_results/.gitkeep
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Config with sensitive data (if any)
+config/secrets.yaml
+config/production.yaml
+freqtrade/user_data/config.json
+
+# Data
+data/
+*.csv
+*.json
+!config/*.json
+!**/config*.json
