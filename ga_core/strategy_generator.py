@@ -497,15 +497,21 @@ class StrategyGenerator:
         for param_name, default_value in hyperopt_params.items():
             if isinstance(default_value, int):
                 # Integer parameter
-                min_val = max(0, default_value - 20)
+                min_val = default_value - 20
                 max_val = default_value + 20
+                # Ensure min < max
+                if min_val > max_val:
+                    min_val, max_val = max_val, min_val
                 code_lines.append(
                     f"    {param_name} = IntParameter({min_val}, {max_val}, default={default_value}, space='buy')"
                 )
             elif isinstance(default_value, float):
                 # Decimal parameter
-                min_val = max(0.0, default_value - 0.2)
+                min_val = default_value - 0.2
                 max_val = default_value + 0.2
+                # Ensure min < max
+                if min_val > max_val:
+                    min_val, max_val = max_val, min_val
                 code_lines.append(
                     f"    {param_name} = DecimalParameter({min_val:.2f}, {max_val:.2f}, default={default_value:.2f}, decimals=2, space='buy')"
                 )
