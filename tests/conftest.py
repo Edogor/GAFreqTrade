@@ -32,11 +32,7 @@ def mock_strategy_metadata():
         'class_name': 'Strategy_Gen000_Strat_001',
         'generation': 0,
         'strategy_num': 1,
-        'indicators': [
-            {'name': 'rsi', 'params': {'timeperiod': 14}},
-            {'name': 'macd', 'params': {'fastperiod': 12, 'slowperiod': 26, 'signalperiod': 9}},
-            {'name': 'ema', 'params': {'timeperiod': 20}}
-        ],
+        'indicators': ['rsi', 'macd', 'ema'],  # String list, not dicts
         'buy_conditions': [
             "(dataframe['rsi'] < buy_rsi_threshold)",
             "(dataframe['macd'] > dataframe['macdsignal'])"
@@ -53,16 +49,7 @@ def mock_strategy_metadata():
         'trailing_stop_positive': 0.01,
         'trailing_stop_positive_offset': 0.02,
         'trailing_only_offset_is_reached': True,
-        'minimal_roi': {
-            "0": 0.10,
-            "30": 0.05,
-            "60": 0.02,
-            "120": 0
-        },
-        'hyperopt_params': {
-            'buy_rsi_threshold': {'type': 'int', 'low': 20, 'high': 40, 'default': 30},
-            'sell_rsi_threshold': {'type': 'int', 'low': 60, 'high': 80, 'default': 70}
-        },
+        'hyperopt_params': ['buy_rsi_threshold', 'sell_rsi_threshold'],  # String list
         'file_path': '/tmp/strategies/Strategy_Gen000_Strat_001.py',
         'created_at': '2024-01-01T00:00:00'
     }
@@ -102,10 +89,7 @@ def mock_population_data():
             'class_name': f'Strategy_Gen000_Strat_{i+1:03d}',
             'generation': 0,
             'strategy_num': i + 1,
-            'indicators': [
-                {'name': 'rsi', 'params': {'timeperiod': 14}},
-                {'name': 'macd', 'params': {'fastperiod': 12, 'slowperiod': 26, 'signalperiod': 9}}
-            ],
+            'indicators': ['rsi', 'macd'],  # String list
             'buy_conditions': ["(dataframe['rsi'] < 30)"],
             'sell_conditions': ["(dataframe['rsi'] > 70)"],
             'num_buy_conditions': 1,
@@ -113,7 +97,7 @@ def mock_population_data():
             'timeframe': '5m',
             'stoploss': -0.10,
             'trailing_stop': True,
-            'hyperopt_params': {},
+            'hyperopt_params': [],  # String list
             'file_path': f'/tmp/strategies/Strategy_Gen000_Strat_{i+1:03d}.py',
             'created_at': '2024-01-01T00:00:00'
         })

@@ -203,7 +203,11 @@ class TestCheckpointingWorkflow:
         # Save checkpoint
         checkpoint_dir = os.path.join(temp_dir, 'checkpoints')
         os.makedirs(checkpoint_dir, exist_ok=True)
-        checkpoint_file = pop1.save_checkpoint(checkpoint_dir)
+        pop1.save_checkpoint(checkpoint_dir)
+        
+        # Find checkpoint file
+        checkpoint_file = os.path.join(checkpoint_dir, f'population_gen_{pop1.generation:04d}.pkl')
+        assert os.path.exists(checkpoint_file)
         
         # Load checkpoint
         pop2 = Population.load_checkpoint(checkpoint_file, output_dir=temp_dir)
@@ -231,7 +235,7 @@ class TestCheckpointingWorkflow:
         checkpoint_dir = os.path.join(temp_dir, 'checkpoints')
         os.makedirs(checkpoint_dir, exist_ok=True)
         
-        checkpoints = []
+        checkpoint_files = []
         
         for gen in range(3):
             # Mock fitness
@@ -240,8 +244,9 @@ class TestCheckpointingWorkflow:
                 pop.update_fitness(strategy['strategy_id'], random.uniform(0.5, 0.9))
             
             # Save checkpoint every generation
-            checkpoint_file = pop.save_checkpoint(checkpoint_dir)
-            checkpoints.append(checkpoint_file)
+            pop.save_checkpoint(checkpoint_dir)
+            checkpoint_file = os.path.join(checkpoint_dir, f'population_gen_{pop.generation:04d}.pkl')
+            checkpoint_files.append(checkpoint_file)
             
             if gen < 2:
                 pop = pop.evolve_generation(
@@ -253,8 +258,8 @@ class TestCheckpointingWorkflow:
                 )
         
         # Verify checkpoints were created
-        assert len(checkpoints) == 3
-        for checkpoint in checkpoints:
+        assert len(checkpoint_files) == 3
+        for checkpoint in checkpoint_files:
             assert os.path.exists(checkpoint)
 
 

@@ -81,18 +81,10 @@ class TestCrossoverOperations:
         """Test single-point crossover combines parent traits."""
         genetic_ops = GeneticOperations()
         parent1 = mock_strategy_metadata.copy()
-        parent1['indicators'] = [
-            {'name': 'rsi', 'params': {}},
-            {'name': 'macd', 'params': {}},
-            {'name': 'ema', 'params': {}}
-        ]
+        parent1['indicators'] = ['rsi', 'macd', 'ema']
         
         parent2 = mock_strategy_metadata.copy()
-        parent2['indicators'] = [
-            {'name': 'bb', 'params': {}},
-            {'name': 'stoch', 'params': {}},
-            {'name': 'adx', 'params': {}}
-        ]
+        parent2['indicators'] = ['bb', 'stoch', 'adx']
         
         child1, child2 = genetic_ops.single_point_crossover(parent1, parent2)
         
