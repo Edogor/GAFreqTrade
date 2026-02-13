@@ -1,6 +1,7 @@
 """
 Unit tests for evaluation.backtester module.
 """
+import os
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from evaluation.backtester import BacktestResult, Backtester
@@ -482,3 +483,47 @@ class TestBacktesterDockerMode:
             # The config path should be "user_data/config.json" inside the container
             assert 'user_data/config.json' in ' '.join(cmd)
             assert 'user_data/strategies' in ' '.join(cmd)
+    
+    def test_absolute_paths_when_changing_working_directory(self):
+        """Test that paths are converted to absolute when working directory changes."""
+        # Mock os.path.isdir to return True for freqtrade_path
+        with patch('evaluation.backtester.os.path.isdir') as mock_isdir:
+            mock_isdir.return_value = True
+            
+            backtester = Backtester(
+                freqtrade_path='freqtrade',
+                config_path='freqtrade/user_data/config.json',
+                data_dir='freqtrade/user_data/data',
+                strategy_dir='strategies/generated',
+                use_docker=False
+            )
+            
+            # When running backtest, the paths should be converted to absolute
+            with patch('evaluation.backtester.subprocess.run') as mock_run:
+                mock_run.return_value = Mock(
+                    returncode=0,
+                    stdout='{"strategy": {"profit_total": 10.5, "total_trades": 100}}',
+                    stderr=''
+                )
+                
+                backtester.run_backtest('TestStrategy')
+                
+                # Check that the command uses absolute paths
+                call_args = mock_run.call_args
+                cmd = call_args[0][0]
+                cmd_str = ' '.join(cmd)
+                
+                # The config path should be absolute (starts with /)
+                # Find the --config argument
+                config_idx = cmd.index('--config')
+                config_path = cmd[config_idx + 1]
+                assert os.path.isabs(config_path), f"Config path {config_path} should be absolute"
+                
+                # Same for datadir and strategy-path
+                datadir_idx = cmd.index('--datadir')
+                datadir = cmd[datadir_idx + 1]
+                assert os.path.isabs(datadir), f"Data dir {datadir} should be absolute"
+                
+                strategy_path_idx = cmd.index('--strategy-path')
+                strategy_path = cmd[strategy_path_idx + 1]
+                assert os.path.isabs(strategy_path), f"Strategy path {strategy_path} should be absolute"
