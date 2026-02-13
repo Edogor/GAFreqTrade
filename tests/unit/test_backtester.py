@@ -1,6 +1,7 @@
 """
 Unit tests for evaluation.backtester module.
 """
+import os
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from evaluation.backtester import BacktestResult, Backtester
@@ -485,8 +486,6 @@ class TestBacktesterDockerMode:
     
     def test_absolute_paths_when_changing_working_directory(self):
         """Test that paths are converted to absolute when working directory changes."""
-        import os
-        
         # Mock os.path.isdir to return True for freqtrade_path
         with patch('evaluation.backtester.os.path.isdir') as mock_isdir:
             mock_isdir.return_value = True
