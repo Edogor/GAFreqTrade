@@ -202,6 +202,7 @@ backtest:
 
 ### 7. Freqtrade Setup prüfen
 
+#### Option A: Native Freqtrade Installation
 ```bash
 cd freqtrade
 # Check Freqtrade installation
@@ -213,6 +214,64 @@ freqtrade download-data --exchange binance --pairs BTC/USDT ETH/USDT --timeframe
 # Test existing strategy
 freqtrade backtesting --strategy MyStrat --timeframe 5m --timerange 20240101-20240201
 ```
+
+#### Option B: Docker Setup (Recommended)
+
+If you're using Docker for Freqtrade (which is common and recommended):
+
+1. **Install Docker if not already installed:**
+```bash
+# Check Docker
+docker --version
+
+# Pull Freqtrade image
+docker pull freqtradeorg/freqtrade:stable
+
+# Test Docker setup
+docker run --rm freqtradeorg/freqtrade:stable --version
+```
+
+2. **Enable Docker mode in config:**
+
+Edit `config/eval_config.yaml`:
+```yaml
+freqtrade:
+  use_docker: true  # Set to true for Docker mode
+  docker_image: "freqtradeorg/freqtrade:stable"
+  docker_user_data_path: "./freqtrade/user_data"  # Path to mount
+  config_path: "freqtrade/user_data/config.json"
+  strategy_path: "freqtrade/user_data/strategies"
+  datadir: "freqtrade/user_data/data"
+```
+
+3. **Download data using Docker:**
+```bash
+docker run --rm -it \
+  -v "$(pwd)/freqtrade/user_data:/freqtrade/user_data" \
+  freqtradeorg/freqtrade:stable \
+  download-data \
+  --exchange binance \
+  --pairs BTC/USDT ETH/USDT \
+  --timeframe 5m \
+  --days 90
+```
+
+4. **Test backtesting with Docker:**
+```bash
+docker run --rm -it \
+  -v "$(pwd)/freqtrade/user_data:/freqtrade/user_data" \
+  freqtradeorg/freqtrade:stable \
+  backtesting \
+  --config user_data/config.json \
+  --strategy MyStrat \
+  --timeframe 5m \
+  --timerange 20240101-20240201
+```
+
+**Note:** When using Docker mode, GAFreqTrade will automatically:
+- Mount your local `freqtrade/user_data` directory
+- Run all backtests in Docker containers
+- Handle path translations between host and container
 
 ### 8. Erste Tests
 
@@ -267,18 +326,47 @@ cat strategies/generated/Gen001_Strat_001.py
 
 #### Problem: Freqtrade nicht gefunden
 ```bash
-# Check PATH
+# Check PATH (native installation)
 which freqtrade
 
 # Wenn in anderem Verzeichnis:
 export PATH=$PATH:/path/to/freqtrade
+
+# If using Docker, enable Docker mode in config/eval_config.yaml:
+# use_docker: true
+```
+
+#### Problem: "No such file or directory: 'freqtrade'" beim --no-mock
+This means you're trying to run real backtests but Freqtrade is not accessible.
+
+**Solution 1: Enable Docker mode (Recommended)**
+Edit `config/eval_config.yaml`:
+```yaml
+freqtrade:
+  use_docker: true
+  docker_image: "freqtradeorg/freqtrade:stable"
+  docker_user_data_path: "./freqtrade/user_data"
+```
+
+**Solution 2: Install Freqtrade natively**
+```bash
+# Install Freqtrade
+git clone https://github.com/freqtrade/freqtrade.git
+cd freqtrade
+./setup.sh -i
+source .env/bin/activate
 ```
 
 #### Problem: Backtest schlägt fehl
 ```bash
-# Test manuell
+# Test manuell (native)
 cd freqtrade
 freqtrade backtesting --strategy MyStrat --timeframe 5m
+
+# Test manuell (Docker)
+docker run --rm -v "$(pwd)/freqtrade/user_data:/freqtrade/user_data" \
+  freqtradeorg/freqtrade:stable backtesting \
+  --config user_data/config.json --strategy MyStrat
 
 # Check logs
 cat user_data/logs/freqtrade.log

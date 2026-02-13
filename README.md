@@ -109,6 +109,55 @@ cd freqtrade
 # Edit user_data/config.json for your exchange
 ```
 
+### Docker Setup (Recommended)
+
+If you're using Freqtrade with Docker (recommended for isolated environment), you need to enable Docker mode in the configuration:
+
+1. **Edit `config/eval_config.yaml`** and set Docker options:
+```yaml
+freqtrade:
+  use_docker: true  # Enable Docker mode
+  docker_image: "freqtradeorg/freqtrade:stable"  # Docker image to use
+  docker_user_data_path: "./freqtrade/user_data"  # Local path to user_data directory
+  config_path: "freqtrade/user_data/config.json"
+  strategy_path: "freqtrade/user_data/strategies"
+  datadir: "freqtrade/user_data/data"
+```
+
+2. **Ensure Docker is installed and running:**
+```bash
+# Check Docker is available
+docker --version
+
+# Pull Freqtrade image
+docker pull freqtradeorg/freqtrade:stable
+
+# Test Docker setup
+docker run --rm freqtradeorg/freqtrade:stable --version
+```
+
+3. **Set up your user_data directory structure:**
+```bash
+# Your local directory structure should be:
+freqtrade/
+└── user_data/
+    ├── config.json           # Freqtrade config
+    ├── data/                 # Market data
+    └── strategies/           # Strategy files (auto-created)
+```
+
+4. **Run evolution with real backtesting:**
+```bash
+# With Docker enabled in config/eval_config.yaml
+python run_evolution.py --no-mock --generations 10 --population 10
+```
+
+**Note:** When using Docker mode:
+- Generated strategies are automatically placed in `freqtrade/user_data/strategies/`
+- The system mounts your local `user_data` directory into the container
+- All paths inside the container use `/freqtrade/user_data/` prefix
+- Docker must be available and have permissions to run containers
+
 ### Running the Evolution
 ```bash
 # Start evolution with default settings
