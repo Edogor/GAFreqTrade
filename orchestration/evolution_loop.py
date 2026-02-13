@@ -187,8 +187,6 @@ class EvolutionLoop:
             
             logger.info(f"Evaluating {strategy_id}...")
             
-            backtest_failed = False
-            
             if use_mock or self.backtester is None:
                 # Mock evaluation for testing
                 import random
@@ -235,8 +233,8 @@ class EvolutionLoop:
                         failed_strategies.append(strategy_id)
                         continue
                     else:
+                        # Use default metrics for failed strategies when filtering is disabled
                         backtest_metrics = {}
-                        backtest_failed = True
             
             # Calculate fitness
             fitness = self.fitness_calculator.calculate_fitness(backtest_metrics)

@@ -402,7 +402,7 @@ class TestStrategyFiltering:
         
         evolution.backtester = MockBacktester()
         
-        # Evaluate population (use_mock=False to use our mock backtester)
+        # Evaluate population - use_mock=False to trigger real evaluation path (which uses our MockBacktester)
         evolution.evaluate_population(use_mock=False)
         
         # Check that some strategies were filtered out
