@@ -75,6 +75,11 @@ class EvalConfig:
     stake_currency: str = "USDT"
     dry_run: bool = True
     
+    # Docker settings
+    use_docker: bool = False
+    docker_image: str = "freqtradeorg/freqtrade:stable"
+    docker_user_data_path: str = "./freqtrade/user_data"
+    
     min_trades_required: int = 30
     max_drawdown_threshold: float = 0.50
     min_win_rate: float = 0.35

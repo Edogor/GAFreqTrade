@@ -1,4 +1,7 @@
-# Strategy Evaluation Configuration
+# Strategy Evaluation Configuration - Docker Mode Example
+# 
+# This is an example configuration for users running Freqtrade via Docker.
+# Copy this to eval_config.yaml or use as reference.
 
 # Backtesting Parameters
 backtest:
@@ -7,7 +10,7 @@ backtest:
   starting_balance: 1000   # Starting balance in stake currency
   fee: 0.001               # Trading fee (0.1%)
   
-# Freqtrade Settings
+# Freqtrade Settings - Docker Mode
 freqtrade:
   config_path: "freqtrade/user_data/config.json"
   strategy_path: "freqtrade/user_data/strategies"
@@ -17,8 +20,8 @@ freqtrade:
   stake_currency: "USDT"
   dry_run: true
   
-  # Docker Settings
-  use_docker: false           # Set to true to use Docker for Freqtrade
+  # Docker Settings - ENABLED
+  use_docker: true           # Set to true to use Docker for Freqtrade
   docker_image: "freqtradeorg/freqtrade:stable"  # Docker image to use
   docker_user_data_path: "./freqtrade/user_data"  # Local path to user_data (will be mounted)
   

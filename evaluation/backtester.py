@@ -119,7 +119,10 @@ class Backtester:
                  config_path: str = "freqtrade/user_data/config.json",
                  data_dir: str = "freqtrade/user_data/data",
                  strategy_dir: str = "strategies/generated",
-                 timeout: int = 300):
+                 timeout: int = 300,
+                 use_docker: bool = False,
+                 docker_image: str = "freqtradeorg/freqtrade:stable",
+                 docker_user_data_path: str = "./freqtrade/user_data"):
         """
         Initialize backtester
         
@@ -129,12 +132,18 @@ class Backtester:
             data_dir: Path to data directory
             strategy_dir: Directory containing strategies
             timeout: Timeout in seconds for each backtest
+            use_docker: Whether to use Docker to run Freqtrade
+            docker_image: Docker image to use (if use_docker is True)
+            docker_user_data_path: Local path to user_data directory for Docker volume mount
         """
         self.freqtrade_path = freqtrade_path
         self.config_path = config_path
         self.data_dir = data_dir
         self.strategy_dir = strategy_dir
         self.timeout = timeout
+        self.use_docker = use_docker
+        self.docker_image = docker_image
+        self.docker_user_data_path = docker_user_data_path
         
         # Verify freqtrade is available
         self._verify_freqtrade()
@@ -146,19 +155,29 @@ class Backtester:
             cmd = self._build_freqtrade_command(['--version'])
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             if result.returncode == 0:
-                logger.info(f"Freqtrade found: {result.stdout.strip()}")
+                version_output = result.stdout.strip() if result.stdout else result.stderr.strip()
+                logger.info(f"Freqtrade found: {version_output}")
             else:
                 logger.warning("Freqtrade command returned non-zero exit code")
         except Exception as e:
             logger.warning(f"Could not verify freqtrade: {e}")
     
     def _build_freqtrade_command(self, args: List[str]) -> List[str]:
-        """Build freqtrade command"""
-        # Always use 'freqtrade' as a command (assuming it's in PATH)
-        # If freqtrade_path is a path to a directory, we'll handle it with cwd
-        cmd = ['freqtrade']
-        cmd.extend(args)
-        return cmd
+        """Build freqtrade command (supports both native and Docker execution)"""
+        if self.use_docker:
+            # Build Docker command
+            cmd = [
+                'docker', 'run', '--rm',
+                '-v', f'{self.docker_user_data_path}:/freqtrade/user_data',
+                self.docker_image
+            ]
+            cmd.extend(args)
+            return cmd
+        else:
+            # Native execution
+            cmd = ['freqtrade']
+            cmd.extend(args)
+            return cmd
     
     def run_backtest(self, 
                      strategy_name: str,
@@ -183,13 +202,24 @@ class Backtester:
         """
         logger.info(f"Running backtest for strategy: {strategy_name}")
         
+        # Adjust paths for Docker if needed
+        if self.use_docker:
+            # Convert local paths to Docker container paths
+            config_path = "user_data/config.json"
+            data_dir = "user_data/data"
+            strategy_dir = "user_data/strategies"
+        else:
+            config_path = self.config_path
+            data_dir = self.data_dir
+            strategy_dir = self.strategy_dir
+        
         # Build backtest command
         cmd = self._build_freqtrade_command([
             'backtesting',
             '--strategy', strategy_name,
-            '--config', self.config_path,
-            '--datadir', self.data_dir,
-            '--strategy-path', self.strategy_dir,
+            '--config', config_path,
+            '--datadir', data_dir,
+            '--strategy-path', strategy_dir,
             '--export', 'none',  # Don't export trades to save space
             '--breakdown', 'day',  # Daily breakdown for better stats
         ])
@@ -210,11 +240,9 @@ class Backtester:
         # Run backtest
         start_time = time.time()
         try:
-            # Determine working directory
-            # If freqtrade_path is a directory, use it as cwd
-            # Otherwise, use current directory
+            # For Docker, we don't need to change working directory
             work_dir = None
-            if os.path.isdir(self.freqtrade_path):
+            if not self.use_docker and os.path.isdir(self.freqtrade_path):
                 work_dir = self.freqtrade_path
             
             result = subprocess.run(

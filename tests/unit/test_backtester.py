@@ -351,3 +351,134 @@ class TestBacktesterErrorHandling:
             except Exception:
                 # Or it might raise an exception
                 pass
+
+
+class TestBacktesterDockerMode:
+    """Tests for Docker mode in Backtester."""
+    
+    @patch('evaluation.backtester.os.path.exists')
+    def test_backtester_docker_init(self, mock_exists):
+        """Test Backtester initialization with Docker mode."""
+        mock_exists.return_value = True
+        
+        backtester = Backtester(
+            freqtrade_path='freqtrade',
+            config_path='freqtrade/user_data/config.json',
+            strategy_dir='strategies',
+            use_docker=True,
+            docker_image='freqtradeorg/freqtrade:stable',
+            docker_user_data_path='./freqtrade/user_data'
+        )
+        
+        assert backtester.use_docker is True
+        assert backtester.docker_image == 'freqtradeorg/freqtrade:stable'
+        assert backtester.docker_user_data_path == './freqtrade/user_data'
+    
+    @patch('evaluation.backtester.os.path.exists')
+    def test_build_docker_command(self, mock_exists):
+        """Test that Docker commands are built correctly."""
+        mock_exists.return_value = True
+        
+        backtester = Backtester(
+            freqtrade_path='freqtrade',
+            config_path='freqtrade/user_data/config.json',
+            strategy_dir='strategies',
+            use_docker=True,
+            docker_image='freqtradeorg/freqtrade:stable',
+            docker_user_data_path='./freqtrade/user_data'
+        )
+        
+        cmd = backtester._build_freqtrade_command(['--version'])
+        
+        assert 'docker' in cmd
+        assert 'run' in cmd
+        assert '--rm' in cmd
+        assert 'freqtradeorg/freqtrade:stable' in cmd
+        assert '--version' in cmd
+        # Check volume mount is in the command
+        volume_mount_found = any('./freqtrade/user_data' in arg for arg in cmd)
+        assert volume_mount_found
+    
+    @patch('evaluation.backtester.os.path.exists')
+    def test_build_native_command(self, mock_exists):
+        """Test that native commands are built correctly when Docker is disabled."""
+        mock_exists.return_value = True
+        
+        backtester = Backtester(
+            freqtrade_path='freqtrade',
+            config_path='freqtrade/user_data/config.json',
+            strategy_dir='strategies',
+            use_docker=False
+        )
+        
+        cmd = backtester._build_freqtrade_command(['--version'])
+        
+        assert 'freqtrade' in cmd
+        assert 'docker' not in cmd
+        assert '--version' in cmd
+    
+    @patch('evaluation.backtester.subprocess.run')
+    @patch('evaluation.backtester.os.path.exists')
+    def test_docker_backtest_execution(self, mock_exists, mock_run):
+        """Test that backtests run with correct Docker command."""
+        mock_exists.return_value = True
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout='{"strategy": {"profit_total": 10.5, "total_trades": 100}}',
+            stderr=''
+        )
+        
+        backtester = Backtester(
+            freqtrade_path='freqtrade',
+            config_path='freqtrade/user_data/config.json',
+            strategy_dir='strategies',
+            use_docker=True,
+            docker_image='freqtradeorg/freqtrade:stable',
+            docker_user_data_path='./freqtrade/user_data'
+        )
+        
+        result = backtester.run_backtest('TestStrategy')
+        
+        # Check that subprocess.run was called
+        assert mock_run.called
+        
+        # Check that the command includes Docker components
+        call_args = mock_run.call_args
+        cmd = call_args[0][0]
+        assert 'docker' in cmd
+        assert 'freqtradeorg/freqtrade:stable' in cmd
+        
+        # Check that result is valid
+        assert isinstance(result, BacktestResult)
+    
+    @patch('evaluation.backtester.os.path.exists')
+    def test_docker_path_conversion(self, mock_exists):
+        """Test that paths are correctly converted for Docker."""
+        mock_exists.return_value = True
+        
+        backtester = Backtester(
+            freqtrade_path='freqtrade',
+            config_path='freqtrade/user_data/config.json',
+            strategy_dir='freqtrade/user_data/strategies',
+            use_docker=True,
+            docker_image='freqtradeorg/freqtrade:stable',
+            docker_user_data_path='./freqtrade/user_data'
+        )
+        
+        # When running backtest, the paths should be converted to container paths
+        with patch('evaluation.backtester.subprocess.run') as mock_run:
+            mock_run.return_value = Mock(
+                returncode=0,
+                stdout='{"strategy": {"profit_total": 10.5, "total_trades": 100}}',
+                stderr=''
+            )
+            
+            backtester.run_backtest('TestStrategy')
+            
+            # Check that the command uses container paths
+            call_args = mock_run.call_args
+            cmd = call_args[0][0]
+            
+            # The config path should be "user_data/config.json" inside the container
+            assert 'user_data/config.json' in ' '.join(cmd)
+            assert 'user_data/strategies' in ' '.join(cmd)
