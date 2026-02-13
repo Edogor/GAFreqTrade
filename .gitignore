@@ -53,6 +53,14 @@ strategies/generated/*
 strategies/hall_of_fame/*
 !strategies/hall_of_fame/.gitkeep
 
+# Visualization Plots (generated files)
+plots/
+*.png
+*.jpg
+*.jpeg
+!docs/**/*.png
+!docs/**/*.jpg
+
 # Backtest Results
 freqtrade/user_data/backtest_results/*
 !freqtrade/user_data/backtest_results/.gitkeep

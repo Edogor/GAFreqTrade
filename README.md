@@ -131,7 +131,39 @@ python report.py --generation 100
 
 # Show top strategies
 python show_leaderboard.py --top 10
+
+# Generate visualization plots
+python visualize_evolution.py
+
+# Monitor with visualization
+python monitor.py --plot
 ```
+
+### Visualization
+
+The system includes comprehensive visualization tools:
+
+```bash
+# Generate all visualization plots
+python visualize_evolution.py
+
+# Generate specific plots
+python visualize_evolution.py --fitness --dashboard
+
+# Include plots in reports
+python report.py --with-plots
+
+# Run demo with sample data
+python demo_visualization.py
+```
+
+**Available Visualizations:**
+- Fitness evolution over generations
+- Performance comparisons (profit, Sharpe ratio, drawdown, win rate)
+- Population diversity tracking
+- Top strategies dashboard
+
+See [VISUALIZATION_GUIDE.md](VISUALIZATION_GUIDE.md) for detailed documentation.
 
 ## Konfiguration / Configuration
 

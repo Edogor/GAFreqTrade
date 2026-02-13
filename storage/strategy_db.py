@@ -191,38 +191,42 @@ class StrategyDB:
             print(f"Error saving generation: {e}")
             return False
     
-    def get_top_strategies(self, n: int = 10) -> List[Dict[str, Any]]:
+    def get_top_strategies(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
         Get top N strategies by fitness.
         
         Args:
-            n: Number of strategies to return
+            limit: Number of strategies to return
             
         Returns:
             List of strategy dictionaries
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
                 
                 # Query results directly since strategies may not be fully populated
                 cursor.execute("""
                     SELECT strategy_name, generation, fitness, profit, 
-                           sharpe_ratio, max_drawdown, win_rate, metrics
+                           sharpe_ratio, max_drawdown, win_rate, total_trades, metrics
                     FROM results
                     ORDER BY fitness DESC
                     LIMIT ?
-                """, (n,))
+                """, (limit,))
                 
                 results = []
                 for row in cursor.fetchall():
-                    metrics = json.loads(row[7]) if row[7] else {}
+                    metrics = json.loads(row['metrics']) if row['metrics'] else {}
                     results.append({
-                        'name': row[0],
-                        'generation': row[1],
-                        'fitness': row[2],
-                        'profit': row[3],
-                        'indicators': [],  # Will be extracted from metrics if available
+                        'strategy_name': row['strategy_name'],
+                        'generation': row['generation'],
+                        'fitness': row['fitness'],
+                        'profit': row['profit'],
+                        'sharpe_ratio': row['sharpe_ratio'],
+                        'max_drawdown': row['max_drawdown'],
+                        'win_rate': row['win_rate'],
+                        'total_trades': row['total_trades'],
                         'metrics': metrics
                     })
                 
@@ -296,4 +300,40 @@ class StrategyDB:
                 return results
         except Exception as e:
             print(f"Error getting all generations: {e}")
+            return []
+    
+    def get_generations_stats(self) -> List[Dict[str, Any]]:
+        """
+        Get comprehensive statistics for all generations.
+        
+        Returns:
+            List of generation statistics with all fields
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT generation, best_fitness, avg_fitness, best_profit,
+                           population_size, diversity, completed_at
+                    FROM generations
+                    ORDER BY generation
+                """)
+                
+                results = []
+                for row in cursor.fetchall():
+                    results.append({
+                        'generation': row['generation'],
+                        'best_fitness': row['best_fitness'],
+                        'avg_fitness': row['avg_fitness'],
+                        'best_profit': row['best_profit'],
+                        'population_size': row['population_size'],
+                        'diversity': row['diversity'],
+                        'completed_at': row['completed_at']
+                    })
+                
+                return results
+        except Exception as e:
+            print(f"Error getting generations stats: {e}")
             return []
