@@ -17,6 +17,11 @@ freqtrade:
   stake_currency: "USDT"
   dry_run: true
   
+  # Docker Settings
+  use_docker: false           # Set to true to use Docker for Freqtrade
+  docker_image: "freqtradeorg/freqtrade:stable"  # Docker image to use
+  docker_user_data_path: "./freqtrade/user_data"  # Local path to user_data (will be mounted)
+  
 # Strategy Validation
 validation:
   min_trades_required: 30   # Minimum trades for valid strategy

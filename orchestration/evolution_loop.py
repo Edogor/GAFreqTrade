@@ -90,10 +90,18 @@ class EvolutionLoop:
             config_path = self.eval_config.get('freqtrade_config_path', 'freqtrade/user_data/config.json')
             strategy_dir = self.eval_config.get('strategy_path', 'strategies/generated')
             
+            # Get Docker settings
+            use_docker = self.eval_config.get('use_docker', False)
+            docker_image = self.eval_config.get('docker_image', 'freqtradeorg/freqtrade:stable')
+            docker_user_data_path = self.eval_config.get('docker_user_data_path', './freqtrade/user_data')
+            
             self.backtester = Backtester(
                 freqtrade_path=freqtrade_path,
                 config_path=config_path,
-                strategy_dir=strategy_dir
+                strategy_dir=strategy_dir,
+                use_docker=use_docker,
+                docker_image=docker_image,
+                docker_user_data_path=docker_user_data_path
             )
         except Exception as e:
             logger.warning(f"Could not initialize backtester: {e}")
@@ -141,6 +149,10 @@ class EvolutionLoop:
                 'timerange': None,  # Will be set later
                 'min_trades_required': eval_config_obj.min_trades_required,
                 'ignore_invalid_strategies': eval_config_obj.ignore_invalid_strategies,
+                # Docker settings
+                'use_docker': eval_config_obj.use_docker,
+                'docker_image': eval_config_obj.docker_image,
+                'docker_user_data_path': eval_config_obj.docker_user_data_path,
             }
         except Exception as e:
             logger.warning(f"Failed to load eval_config.yaml: {e}, using defaults")
@@ -152,6 +164,10 @@ class EvolutionLoop:
                 'timerange': None,
                 'min_trades_required': 10,
                 'ignore_invalid_strategies': True,
+                # Docker defaults
+                'use_docker': False,
+                'docker_image': 'freqtradeorg/freqtrade:stable',
+                'docker_user_data_path': './freqtrade/user_data',
             }
     
     def initialize_population(self):
