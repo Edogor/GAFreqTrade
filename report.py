@@ -11,6 +11,7 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 from storage.strategy_db import StrategyDB
+from utils.visualization import EvolutionVisualizer
 
 
 def generate_report(db: StrategyDB, output_file: str = None):
@@ -113,6 +114,19 @@ def main():
         help='Output file path (default: print to console)'
     )
     
+    parser.add_argument(
+        '--with-plots',
+        action='store_true',
+        help='Generate visualization plots along with report'
+    )
+    
+    parser.add_argument(
+        '--plot-dir',
+        type=str,
+        default='plots',
+        help='Output directory for plots (default: plots)'
+    )
+    
     args = parser.parse_args()
     
     # Check if database exists
@@ -126,6 +140,19 @@ def main():
     
     # Generate report
     generate_report(db, args.output)
+    
+    # Generate plots if requested
+    if args.with_plots:
+        print(f"\nGenerating visualization plots in '{args.plot_dir}'...")
+        visualizer = EvolutionVisualizer(db, args.plot_dir)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        plots = visualizer.generate_all_plots(output_subdir=f"report_{timestamp}")
+        
+        print("\nGenerated plots:")
+        for plot_type, plot_path in plots.items():
+            if plot_path:
+                print(f"  ✓ {plot_type}: {plot_path}")
     
     return 0
 

@@ -11,6 +11,7 @@ import argparse
 import time
 from pathlib import Path
 from storage.strategy_db import StrategyDB
+from utils.visualization import EvolutionVisualizer
 
 
 def display_stats(db: StrategyDB, clear_screen: bool = False):
@@ -93,6 +94,19 @@ def main():
         help='Refresh interval for live mode in seconds (default: 10)'
     )
     
+    parser.add_argument(
+        '--plot',
+        action='store_true',
+        help='Generate visualization plots'
+    )
+    
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default='plots',
+        help='Output directory for plots (default: plots)'
+    )
+    
     args = parser.parse_args()
     
     # Check if database exists
@@ -103,6 +117,18 @@ def main():
     
     # Load database
     db = StrategyDB(args.db)
+    
+    # Generate plots if requested
+    if args.plot:
+        print(f"\nGenerating visualization plots in '{args.output_dir}'...")
+        visualizer = EvolutionVisualizer(db, args.output_dir)
+        plots = visualizer.generate_all_plots()
+        
+        print("\nGenerated plots:")
+        for plot_type, plot_path in plots.items():
+            if plot_path:
+                print(f"  ✓ {plot_type}: {plot_path}")
+        print()
     
     if args.live:
         print("Starting live monitoring (press Ctrl+C to exit)...")
