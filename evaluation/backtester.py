@@ -209,9 +209,10 @@ class Backtester:
             data_dir = "user_data/data"
             strategy_dir = "user_data/strategies"
         else:
-            config_path = self.config_path
-            data_dir = self.data_dir
-            strategy_dir = self.strategy_dir
+            # Convert paths to absolute paths to handle working directory changes
+            config_path = os.path.abspath(self.config_path)
+            data_dir = os.path.abspath(self.data_dir)
+            strategy_dir = os.path.abspath(self.strategy_dir)
         
         # Build backtest command
         cmd = self._build_freqtrade_command([
