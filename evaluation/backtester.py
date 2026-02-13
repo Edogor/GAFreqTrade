@@ -154,13 +154,9 @@ class Backtester:
     
     def _build_freqtrade_command(self, args: List[str]) -> List[str]:
         """Build freqtrade command"""
-        # Check if freqtrade_path is a directory or executable
-        if os.path.isdir(self.freqtrade_path):
-            # Assume it's a directory with freqtrade script
-            cmd = ['freqtrade']
-        else:
-            cmd = [self.freqtrade_path]
-        
+        # Always use 'freqtrade' as a command (assuming it's in PATH)
+        # If freqtrade_path is a path to a directory, we'll handle it with cwd
+        cmd = ['freqtrade']
         cmd.extend(args)
         return cmd
     
@@ -214,13 +210,20 @@ class Backtester:
         # Run backtest
         start_time = time.time()
         try:
+            # Determine working directory
+            # If freqtrade_path is a directory, use it as cwd
+            # Otherwise, use current directory
+            work_dir = None
+            if os.path.isdir(self.freqtrade_path):
+                work_dir = self.freqtrade_path
+            
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
                 env=env,
-                cwd=os.path.dirname(self.freqtrade_path) if os.path.isdir(self.freqtrade_path) else None
+                cwd=work_dir
             )
             
             duration = time.time() - start_time

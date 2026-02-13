@@ -339,3 +339,117 @@ class TestFullEvolutionRun:
         print(f"Generations completed: {generations}")
         print(f"Best fitness trajectory: {best_fitness_history}")
         print(f"Final top strategy fitness: {pop.fitness_scores.get(top_strategies[0]['strategy_id'], 0):.3f}")
+
+
+@pytest.mark.integration
+class TestStrategyFiltering:
+    """Integration tests for strategy filtering during evaluation."""
+    
+    def test_filter_failed_strategies(self, temp_dir):
+        """Test that failed strategies are filtered out during evaluation."""
+        from orchestration.evolution_loop import EvolutionLoop
+        from evaluation.backtester import BacktestResult
+        
+        # Create evolution loop with config to ignore invalid strategies
+        config = {
+            'population_size': 5,
+            'generations': 1,
+            'elite_size': 2,
+            'mutation_rate': 0.2,
+            'crossover_rate': 0.7,
+        }
+        
+        eval_config = {
+            'freqtrade_path': 'freqtrade',
+            'freqtrade_config_path': 'freqtrade/user_data/config.json',
+            'strategy_path': temp_dir,
+            'datadir': 'freqtrade/user_data/data',
+            'timerange': None,
+            'min_trades_required': 10,
+            'ignore_invalid_strategies': True,
+        }
+        
+        evolution = EvolutionLoop(config=config, eval_config=eval_config)
+        evolution.initialize_population()
+        
+        initial_size = len(evolution.population.strategies)
+        assert initial_size == 5
+        
+        # Mock the backtester to simulate some failures
+        original_backtester = evolution.backtester
+        
+        class MockBacktester:
+            def __init__(self):
+                self.call_count = 0
+                
+            def run_backtest(self, strategy_name, **kwargs):
+                self.call_count += 1
+                # Make every other strategy fail
+                if self.call_count % 2 == 0:
+                    # Return invalid result (no trades)
+                    return BacktestResult(strategy_name, {})
+                else:
+                    # Return valid result
+                    return BacktestResult(strategy_name, {
+                        'strategy': {
+                            'profit_total': 10.0,
+                            'total_trades': 50,
+                            'winrate': 55.0,
+                            'sharpe': 1.5,
+                            'max_drawdown': -10.0,
+                        }
+                    })
+        
+        evolution.backtester = MockBacktester()
+        
+        # Evaluate population - use_mock=False to trigger real evaluation path (which uses our MockBacktester)
+        evolution.evaluate_population(use_mock=False)
+        
+        # Check that some strategies were filtered out
+        final_size = len(evolution.population.strategies)
+        assert final_size < initial_size, "Failed strategies should have been filtered out"
+        print(f"Population filtered from {initial_size} to {final_size} strategies")
+    
+    def test_no_filter_when_disabled(self, temp_dir):
+        """Test that strategies are not filtered when filtering is disabled."""
+        from orchestration.evolution_loop import EvolutionLoop
+        from evaluation.backtester import BacktestResult
+        
+        # Create evolution loop with config to NOT ignore invalid strategies
+        config = {
+            'population_size': 5,
+            'generations': 1,
+            'elite_size': 2,
+            'mutation_rate': 0.2,
+            'crossover_rate': 0.7,
+        }
+        
+        eval_config = {
+            'freqtrade_path': 'freqtrade',
+            'freqtrade_config_path': 'freqtrade/user_data/config.json',
+            'strategy_path': temp_dir,
+            'datadir': 'freqtrade/user_data/data',
+            'timerange': None,
+            'min_trades_required': 10,
+            'ignore_invalid_strategies': False,  # Disabled
+        }
+        
+        evolution = EvolutionLoop(config=config, eval_config=eval_config)
+        evolution.initialize_population()
+        
+        initial_size = len(evolution.population.strategies)
+        
+        class MockBacktester:
+            def run_backtest(self, strategy_name, **kwargs):
+                # Always return invalid results
+                return BacktestResult(strategy_name, {})
+        
+        evolution.backtester = MockBacktester()
+        
+        # Evaluate population
+        evolution.evaluate_population(use_mock=False)
+        
+        # Check that NO strategies were filtered out
+        final_size = len(evolution.population.strategies)
+        assert final_size == initial_size, "Strategies should not be filtered when filtering is disabled"
+        print(f"Population size unchanged: {final_size} strategies")
