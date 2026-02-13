@@ -1,0 +1,75 @@
+# Strategy Evaluation Configuration - Docker Mode Example
+# 
+# This is an example configuration for users running Freqtrade via Docker.
+# Copy this to eval_config.yaml or use as reference.
+
+# Backtesting Parameters
+backtest:
+  period: "90d"            # Backtest period (e.g., "30d", "90d", "1y")
+  timeframe: "5m"          # Trading timeframe
+  starting_balance: 1000   # Starting balance in stake currency
+  fee: 0.001               # Trading fee (0.1%)
+  
+# Freqtrade Settings - Docker Mode
+freqtrade:
+  config_path: "freqtrade/user_data/config.json"
+  strategy_path: "freqtrade/user_data/strategies"
+  datadir: "freqtrade/user_data/data"
+  max_open_trades: 3
+  stake_amount: "unlimited"
+  stake_currency: "USDT"
+  dry_run: true
+  
+  # Docker Settings - ENABLED
+  use_docker: true           # Set to true to use Docker for Freqtrade
+  docker_image: "freqtradeorg/freqtrade:stable"  # Docker image to use
+  docker_user_data_path: "./freqtrade/user_data"  # Local path to user_data (will be mounted)
+  
+# Strategy Validation
+validation:
+  min_trades_required: 30   # Minimum trades for valid strategy
+  max_drawdown_threshold: 0.50  # 50% - reject if exceeded
+  min_win_rate: 0.35        # 35% - minimum acceptable win rate
+  min_profit: -0.10         # -10% - reject if profit below this
+  max_trade_duration: 3600  # Maximum avg trade duration in minutes
+  
+# Risk Management Constraints
+risk:
+  max_position_size: 0.33   # Max 33% of balance per trade
+  max_drawdown_allowed: 0.40  # 40% max drawdown
+  required_profit_factor: 1.1  # Profit factor must be > 1.1
+  
+# Metrics Collection
+metrics:
+  collect_detailed: true    # Collect detailed metrics
+  save_trades: false        # Save individual trades (memory intensive)
+  calculate_sharpe: true
+  calculate_sortino: true
+  calculate_calmar: true
+  
+# Evaluation Modes
+modes:
+  backtest_only: true       # Only backtest, no dry-run yet
+  dry_run_enabled: false    # Enable dry-run evaluation
+  live_test_enabled: false  # Enable live testing (future)
+  
+# Data Requirements
+data:
+  min_candles: 500          # Minimum candles needed
+  prefetch_days: 100        # Days of data to prefetch
+  update_before_backtest: false  # Update data before each backtest
+  
+# Performance
+performance:
+  cache_results: true       # Cache backtest results
+  cache_ttl: 3600           # Cache time-to-live in seconds
+  use_cached_indicators: true
+  parallel_downloads: true
+  
+# Error Handling
+error_handling:
+  retry_on_failure: true
+  max_retries: 3
+  retry_delay: 5            # Seconds between retries
+  ignore_invalid_strategies: true
+  log_errors: true
