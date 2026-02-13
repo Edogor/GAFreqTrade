@@ -122,8 +122,15 @@ class EvolutionLoop:
         """Load evaluation configuration from file"""
         try:
             from utils.config_loader import ConfigLoader
-            loader = ConfigLoader()
-            eval_config_obj = loader.load_eval_config('config/eval_config.yaml')
+            from pathlib import Path
+            import os
+            
+            # Get absolute path to the config file
+            script_dir = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            config_path = script_dir / 'config' / 'eval_config.yaml'
+            
+            loader = ConfigLoader(base_dir=script_dir)
+            eval_config_obj = loader.load_eval_config(str(config_path))
             
             # Convert to dict for easier use
             return {
@@ -434,7 +441,7 @@ class EvolutionLoop:
         return self.population
 
 
-def run_evolution(config_path: Optional[str] = None, 
+def run_evolution(config: Optional[Dict] = None, 
                  resume_checkpoint: Optional[str] = None,
                  max_generations: int = 10,
                  use_mock: bool = True):
@@ -442,7 +449,7 @@ def run_evolution(config_path: Optional[str] = None,
     Convenience function to run evolution
     
     Args:
-        config_path: Path to config file
+        config: Configuration dictionary
         resume_checkpoint: Path to checkpoint file to resume from
         max_generations: Maximum number of generations
         use_mock: Use mock evaluation (for testing without Freqtrade)
@@ -450,15 +457,6 @@ def run_evolution(config_path: Optional[str] = None,
     Returns:
         Final population
     """
-    # Load config
-    if config_path:
-        try:
-            config = load_config(config_path)
-        except:
-            config = None
-    else:
-        config = None
-    
     # Create evolution loop
     evolution = EvolutionLoop(config)
     

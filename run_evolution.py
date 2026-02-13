@@ -126,18 +126,18 @@ Examples:
         print_banner()
     
     # Load configuration
-    config = None
+    config = {}
     if args.config and Path(args.config).exists():
         try:
-            from utils.config_loader import load_config
-            config = load_config(args.config)
+            import yaml
+            with open(args.config, 'r') as f:
+                loaded_config = yaml.safe_load(f) or {}
+                config.update(loaded_config)
             logger.info(f"Loaded configuration from {args.config}")
         except Exception as e:
             logger.warning(f"Failed to load config: {e}, using defaults")
-            config = {}
     else:
-        logger.info("Using default configuration")
-        config = {}
+        logger.debug("Using default configuration")
     
     # Override config with CLI arguments
     if args.population:
@@ -183,7 +183,7 @@ Examples:
         logger.info("Starting evolution...")
         
         final_population = run_evolution(
-            config_path=args.config if config else None,
+            config=config,
             resume_checkpoint=args.resume,
             max_generations=config.get('generations', 10),
             use_mock=not args.no_mock
