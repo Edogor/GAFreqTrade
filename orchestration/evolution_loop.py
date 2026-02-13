@@ -47,12 +47,13 @@ class EvolutionLoop:
     - Statistics tracking
     """
     
-    def __init__(self, config: Optional[Dict] = None):
+    def __init__(self, config: Optional[Dict] = None, eval_config: Optional[Dict] = None):
         """
         Initialize evolution loop
         
         Args:
             config: Configuration dictionary (or GAConfig object)
+            eval_config: Evaluation configuration dictionary
         """
         if config is None:
             # Use default config
@@ -77,12 +78,22 @@ class EvolutionLoop:
         
         self.config = config
         
+        # Load eval config if not provided
+        if eval_config is None:
+            eval_config = self._load_eval_config()
+        self.eval_config = eval_config
+        
         # Initialize components
         try:
+            # Get freqtrade settings from eval_config
+            freqtrade_path = self.eval_config.get('freqtrade_path', 'freqtrade')
+            config_path = self.eval_config.get('freqtrade_config_path', 'freqtrade/user_data/config.json')
+            strategy_dir = self.eval_config.get('strategy_path', 'strategies/generated')
+            
             self.backtester = Backtester(
-                freqtrade_path="freqtrade",
-                config_path="freqtrade/user_data/config.json",
-                strategy_dir="strategies/generated"
+                freqtrade_path=freqtrade_path,
+                config_path=config_path,
+                strategy_dir=strategy_dir
             )
         except Exception as e:
             logger.warning(f"Could not initialize backtester: {e}")
@@ -106,10 +117,35 @@ class EvolutionLoop:
         self.population: Optional[Population] = None
         self.current_generation = 0
         self.start_time = None
-        
-        self.population: Optional[Population] = None
-        self.current_generation = 0
-        self.start_time = None
+    
+    def _load_eval_config(self) -> Dict:
+        """Load evaluation configuration from file"""
+        try:
+            from utils.config_loader import ConfigLoader
+            loader = ConfigLoader()
+            eval_config_obj = loader.load_eval_config('config/eval_config.yaml')
+            
+            # Convert to dict for easier use
+            return {
+                'freqtrade_path': 'freqtrade',  # Keep as command, not path
+                'freqtrade_config_path': eval_config_obj.freqtrade_config_path,
+                'strategy_path': eval_config_obj.strategy_path,
+                'datadir': eval_config_obj.datadir,
+                'timerange': None,  # Will be set later
+                'min_trades_required': eval_config_obj.min_trades_required,
+                'ignore_invalid_strategies': eval_config_obj.ignore_invalid_strategies,
+            }
+        except Exception as e:
+            logger.warning(f"Failed to load eval_config.yaml: {e}, using defaults")
+            return {
+                'freqtrade_path': 'freqtrade',
+                'freqtrade_config_path': 'freqtrade/user_data/config.json',
+                'strategy_path': 'strategies/generated',
+                'datadir': 'freqtrade/user_data/data',
+                'timerange': None,
+                'min_trades_required': 10,
+                'ignore_invalid_strategies': True,
+            }
     
     def initialize_population(self):
         """Initialize the population"""
@@ -136,12 +172,15 @@ class EvolutionLoop:
         logger.info(f"Evaluating generation {self.current_generation}...")
         
         evaluated_count = 0
+        failed_strategies = []  # Track strategies that failed evaluation
         
         for strategy in self.population.strategies:
             strategy_id = strategy['strategy_id']
             class_name = strategy['class_name']
             
             logger.info(f"Evaluating {strategy_id}...")
+            
+            backtest_failed = False
             
             if use_mock or self.backtester is None:
                 # Mock evaluation for testing
@@ -170,14 +209,27 @@ class EvolutionLoop:
                     )
                     
                     if not result.is_valid():
-                        logger.warning(f"Backtest for {strategy_id} produced no trades")
-                        backtest_metrics = result._default_metrics()
+                        logger.warning(f"Backtest for {strategy_id} produced no valid trades")
+                        # Check if we should ignore invalid strategies
+                        if self.eval_config.get('ignore_invalid_strategies', True):
+                            logger.warning(f"Marking {strategy_id} for removal (no valid trades)")
+                            failed_strategies.append(strategy_id)
+                            continue
+                        else:
+                            backtest_metrics = result._default_metrics()
                     else:
                         backtest_metrics = result.metrics
                         
                 except Exception as e:
                     logger.error(f"Error backtesting {strategy_id}: {e}")
-                    backtest_metrics = {}
+                    # Mark strategy as failed if it throws an error
+                    if self.eval_config.get('ignore_invalid_strategies', True):
+                        logger.warning(f"Marking {strategy_id} for removal (backtest error)")
+                        failed_strategies.append(strategy_id)
+                        continue
+                    else:
+                        backtest_metrics = {}
+                        backtest_failed = True
             
             # Calculate fitness
             fitness = self.fitness_calculator.calculate_fitness(backtest_metrics)
@@ -216,6 +268,20 @@ class EvolutionLoop:
             
             evaluated_count += 1
             logger.info(f"  Fitness: {fitness:.4f}, Profit: {backtest_metrics.get('total_profit_pct', 0):.2f}%")
+        
+        # Remove failed strategies from population
+        if failed_strategies:
+            logger.warning(f"Removing {len(failed_strategies)} failed strategies from population")
+            self.population.strategies = [
+                s for s in self.population.strategies 
+                if s['strategy_id'] not in failed_strategies
+            ]
+            # Also remove from fitness scores
+            for strategy_id in failed_strategies:
+                if strategy_id in self.population.fitness_scores:
+                    del self.population.fitness_scores[strategy_id]
+            
+            logger.info(f"Population size after filtering: {len(self.population.strategies)}")
         
         logger.info(f"Evaluated {evaluated_count} strategies")
         
